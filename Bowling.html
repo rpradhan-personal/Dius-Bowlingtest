@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html>
+<script src="angular.min.js"></script>
+<script src='jquery-3.3.1.min.js'></script>
+<script src='TestData.js'></script>
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+<body>
+
+<div ng-app="myApp" ng-controller="personCtrl">
+   <div  class="spacer">Hints: <br>
+    A. Each frame has 2 bowls <br>
+    B. -1 indicates player did not get that chance to bowl.<br>
+    C. Frame 11,12 shows extra bowls that player gets for spare or strike.<br></div> 
+
+    <div class="inputBox" >
+        <input type="radio" id="testrun" name="testrun" ng-model="test" ng-value="true" ng-click="runcompleted=false;">
+        <label for="html">Test Run</label><br>
+        <input type="radio" id="random" name="random" ng-model="test" ng-value="false" ng-click="runcompleted=false;">
+        <label for="css">Random pin numbers</label><br>
+        <button type="button" ng-click="play(); runcompleted =true;">Run Now </button>
+    </div>
+    
+
+    <div  ng-if="test==true && runcompleted ==true" ng-repeat='set in testset'>
+        <label for="html">Running Tests................</label><br>
+        <div class="spacer" ng-repeat='set in testset'></div>
+        {{set.testName}}
+        <table class="table table-striped">
+            <tr>
+                <th>Frame#</th>
+                <th>Bowl1</th>
+                <th>Bowl2</th>
+                <th>ExpectedOutput</th>
+                <th>ActualOutput</th>
+            </tr>
+            <tr ng-repeat="item in set.dataPoints" >
+            <td  class='nowrap'>{{$index+1}}</td>
+            <td  class='nowrap'>{{item[0]}}</td>
+            <td  class='nowrap'>{{item[1]}}</td>
+            <td  class='nowrap'>{{item[2]}}</td>
+            <td  class='nowrap'>{{item[3]}}</td>
+        </tr>
+        </table>
+        Expected Score = {{set.ExpectedScore}}............ Actual Score = {{set.ActualScore}}<br>
+        <div  ng-if='set.ExpectedScore==set.ActualScore' class="border-blue pass">
+            Test Passed
+        </div>
+        <div  ng-if='set.ExpectedScore!=set.ActualScore' class="border-blue fail">
+            Test Failed
+        </div>
+    </div>
+
+    <div  ng-if="test==false && runcompleted ==true"  >
+        <label for="html">Running with random pin numbers................</label><br>
+        <div class="spacer" ></div>
+        
+        <table class="table table-striped">
+            <tr>
+                <th>Frame#</th>
+                <th>Bowl1</th>
+                <th>Bowl2</th>
+                <th>ActualOutput</th>
+            </tr>
+            <tr ng-repeat="item in frame" >
+            <td  class='nowrap'>{{$index+1}}</td>
+            <td  class='nowrap'>{{item[0]}}</td>
+            <td  class='nowrap'>{{item[1]}}</td>
+            <td  class='nowrap'>{{item[2]}}</td>
+        </tr>
+        </table>
+        Actual Score = {{ActualScore}}<br>
+
+
+    </div>
+
+</div>
+<style>
+    td.nowrap {
+        min-width: 150px;
+    }
+
+    .spacer {
+        height: 50px;
+    }
+
+    .border-blue{
+        border-bottom: 2px solid blue;
+    }
+    .pass{
+        font-size: larger;
+        color: blue;
+        font-weight: 200; 
+    }
+
+    .fail{
+        font-size: larger;
+        color: red;
+        font-weight: 200; 
+    }
+
+    .inputBox{
+        padding-top: 100px;
+        padding-bottom: 50px;
+    }
+
+</style>
+
+<script>
+var app = angular.module('myApp', []);
+app.controller('personCtrl', function($scope) {
+
+    $scope.user = 'Rashmita Pradhan' ;
+    $scope.maxFrames = 11;
+    $scope.maxTriesPerFrame = 2 ;
+    $scope.frame = [];
+    $scope.runcompleted = false;
+    $scope.test=false;
+    $scope.testset=TEST_SETS;
+    $scope.resetFrame = function(){
+        $scope.frame = [];
+        for(var i=0 ; i< $scope.maxFrames ; i++){
+            try{
+                $scope.frame.push([-1,-1,-1])
+            }catch(err){
+                console.log(err.message);
+            }
+        }
+    }
+
+    $scope.framesAdded=false;
+
+    $scope.findFrameIndex= function(){
+        try{
+
+
+            if($scope.isSpare($scope.frame[9]) && !$scope.framesAdded){
+                $scope.frame[$scope.frame.length]=[-1,-1,-1];
+                $scope.framesAdded=true;
+                return $scope.findFrameIndex();
+            }
+            else if($scope.isStrike($scope.frame[9]) && !$scope.framesAdded){
+                $scope.frame[$scope.frame.length]=[-1,-1,-1];
+                $scope.frame[$scope.frame.length]=[-1,-1,-1];
+                $scope.framesAdded=true;
+                return $scope.findFrameIndex();
+            }else if(!$scope.isStrike($scope.frame[9]) && !$scope.isSpare($scope.frame[9]) ){
+                try{
+                    $scope.frame.splice(10);
+                }catch(err){
+                    
+                }
+            }
+
+            for(var i=0 ; i< $scope.frame.length ; i++){
+                if($scope.frame[i][0]=== -1 || $scope.frame[i][1] === -1){
+                    return i;
+                }
+            }
+        
+        }catch(err){
+            return -1;
+        }
+    }
+
+    $scope.score = function (_numPins){
+        try{
+            var _frame = $scope.findFrameIndex();
+            var _try = -1;
+            if($scope.frame[_frame][0]=== -1 ){
+                _try = 0;
+                $scope.frame[_frame][0] = _numPins ;
+                if(_numPins ===10){
+                    $scope.frame[_frame][1] = 0 ;
+                    $scope.frame[_frame][2] = 10;
+                }
+            }else{
+                _try =1;
+                $scope.frame[_frame][1] = _numPins ;
+                $scope.frame[_frame][2]  = $scope.frame[_frame][0] + $scope.frame[_frame][1];
+                
+                /*If in 2 tries, the bowler knocks down all the pins, it is a spare. 
+                The scoring of a spare is the sum of the number of pins knocked down plus the number of pins knocked down in the next bowl.*/
+                if(_frame-1!==-1 && $scope.isSpare($scope.frame[_frame -1]) ){
+                    $scope.frame[_frame -1][2] = $scope.frame[_frame][2] + $scope.frame[_frame-1][2]
+                }
+
+                /*If in one try, the bowler knocks down all the pins, it is a strike. 
+                The scoring of a strike is the sum of the number of pins knocked down plus the number of pins knocked down in the next two bowls.*/
+                if(_frame-2!==-1 && $scope.isStrike($scope.frame[_frame -2]) ){
+                    $scope.frame[_frame -2][2] = $scope.frame[_frame][2] + $scope.frame[_frame-1][2] +10
+
+                }
+
+            }
+        }catch(err){
+            console.log("Error in score !" +err.message);
+        }
+    }
+    
+    $scope.isSpare = function( _frame){
+        try{
+
+            if(_frame[0]!==10 && _frame[1] !==10 && (_frame[0] + _frame[1]) === 10){
+                return true;
+            }
+        }catch(err){
+            return false;
+        }
+    }
+
+    $scope.isStrike = function( _frame){
+        try{
+
+            if(_frame[0]===10 ||  _frame[1] ===10 ){
+                return true;
+            }
+        }catch(err){
+            return false;
+        }
+    }
+
+    $scope.getFrameScore = function( index){
+        try{
+            if($scope.frame[index][0]=== -1 && $scope.frame[index][1]!== -1){
+                return $scope.frame[index][1];
+            }
+
+            if($scope.frame[index][0]!== -1 && $scope.frame[index][1]=== -1){
+                return $scope.frame[index][0];
+            }
+
+            if($scope.frame[index][0]=== -1 && $scope.frame[index][1]=== -1){
+                return 0;
+            }
+
+        }catch(err){
+            console.log("Error in getFrameScore !" +err.message);
+        }
+    }
+
+    $scope.roll = function (maxValue){
+        try{
+            return Math.floor(Math.random() * maxValue);
+        }catch(err){
+            return 0
+        }
+    }
+
+    $scope.resetVars=function(){
+        $scope.maxFrames=11;
+        $scope.resetFrame();
+        $scope.framesAdded=false;
+        $scope.runcompleted=false;
+    }
+
+    $scope.play = function (){
+        try{
+        
+            /*reset Frames*/
+            if($scope.test === false){
+                $scope.resetVars();
+                var _frame = 0;
+                while (_frame < $scope.maxFrames){
+                    pins = $scope.roll(11 - $scope.getFrameScore(_frame));
+                    $scope.score(pins);
+                    _frame = $scope.findFrameIndex();
+
+                    if(_frame>=9){
+                        if($scope.isSpare($scope.frame[9])){
+                            $scope.maxFrames=11;
+                        }
+                        if($scope.isStrike($scope.frame[9])){
+                            $scope.maxFrames=12;
+                        }
+                    }
+
+                }
+                if(!_tframe < $scope.maxFrames){
+                    /* update the test JSON with calculated ouput*/
+                    var total = 0
+                    for(var j=0 ; j<$scope.frame.length ;j++){
+                        if(j<10){
+                            total = total + $scope.frame[j][2];
+                            
+                        }
+                    }
+                    $scope.ActualScore=total;
+                    
+                }
+            }/*if not test*/
+
+           
+            if($scope.test === true){
+                for (var i=0; i <$scope.testset.length ;i++){
+                    $scope.resetVars();
+                    var _tframe = 0;
+                    var _idx=0;
+                    
+                    while (_tframe < $scope.maxFrames){
+                        pins = $scope.testset[i].dataPoints[_tframe][_idx];
+                        if(pins !=-1){
+                            $scope.score(pins);
+                            
+                        }else{
+                            $scope.score(0);
+                        }
+                        _idx = (_idx +1) % 2;
+                        _tframe = $scope.findFrameIndex();
+                        if(pins===-1){
+                            _tframe=_tframe+1;
+                        }
+                        if(_tframe===$scope.maxFrames){
+                            if($scope.isSpare($scope.frame[_tframe-1])){
+                                $scope.maxFrames=11;
+                            }
+                            if($scope.isStrike($scope.frame[_tframe-1])){
+                                $scope.maxFrames=12;
+                            }
+                        }
+                    }/*while*/
+
+                    if(!_tframe < $scope.maxFrames){
+                        /* update the test JSON with calculated ouput*/
+                        var total = 0
+                        var thislen =0;
+                        if($scope.frame.length<$scope.testset[i].dataPoints.length){
+                            thislen = $scope.frame.length
+                        }else{
+                            thislen = $scope.testset[i].dataPoints.length;
+                        }
+                        for(var j=0 ; j<thislen ;j++){
+                            $scope.testset[i].dataPoints[j][3]=$scope.frame[j][2];
+                            if(j<10){
+                                total = total + $scope.frame[j][2];
+                                
+                            }
+                        }
+                        $scope.testset[i].ActualScore=total;
+                        
+                    }
+                
+                }
+            }
+
+        }catch(err){
+            console.log("Error in running !" +err.message);
+        }
+    }
+
+    $scope.fucTemp = function (maxValue){
+        try{
+
+        }catch(err){
+            
+        }
+    }
+
+    
+
+});
+</script>
+
+</body>
+</html>
